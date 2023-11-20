@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- <h4 class="mb-3">Данные о книге</h4> -->
+<h2 class="mb-3 text-center text-uppercase font-weight-bold">Данные о книге</h2>
+<div class="row">
+	<div class="col-md-8">
+		<table class="table">
+			<tbody>
+				<tr>
+					<td>Идентификатор</td>
+					<td>{{ book.id }}</td>
+				</tr>
+				<tr>
+					<td>Название</td>
+					<td>{{ book.name }}</td>
+				</tr>
+				<tr>
+					<td>Жанр</td>
+					<td>
+						{% for genre in book.genres %}
+						{{ genre.name }}{% if loop.last %}{% else %}, {% endif %}
+						{% endfor %}
+					</td>
+				</tr>
+				<tr>
+					<td>Год публикации</td>
+					<td>{{ book.year }} год</td>
+				</tr>
+				<tr>
+					<td>Издательство</td>
+					<td>{{ book.publisher }}</td>
+				</tr>
+				<tr>
+					<td>Автор</td>
+					<td>{{ book.author }}</td>
+				</tr>
+				<tr>
+					<td>Количество страниц</td>
+					<td>{{ book.volume }} стр</td>
+				</tr>
+				<tr>
+					<td>Рейтинг</td>
+					<td>★ {{ "%.2f" | format(book.rating) }}</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+	<div class="col-md-4">
+		<div class="d-flex align-items-center justify-content-center">
+			{% if image.id == book.cover_id %}
+			<img class="show-img" src="{{ image.url }}" />
+			{% endif %}
+
+			{% if not image %}
+			<img class="show-img" src="{{ url_for('static', filename='images/book_example.png') }}" />
+			{% endif %}
+		</div>
+	</div>
+	<div class="col-md-12">
+		<table class="table">
+			<tbody>
+				<tr>
+					<td>Описание</td>
+					<td>{{ book.description | safe }}</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+</div>
+
+<a href="{{ url_for('books.main_page') }}" class="btn btn-dark">Вернуться на главную</a>
+
+<section class="reviews mb-3">
+	<h2 class="mb-3 text-center text-uppercase font-weight-bold">Рецензии</h2>
+	{% for review in reviews %}
+	{% if review %}
+	<div class="card mb-3">
+		<div class="card-body">
+			{% for user in users %}
+			{% if review.user_id == user.id %}
+			<h5 class="card-title mb-3">{{ user.first_name }} {{ user.last_name }}</h5>
+			{% endif %}
+			{% endfor %}
+
+			{% if review.rating == 0 %}
+			<p class="card-text">Оценка: Ужасно</p>
+			{% endif %}
+			{% if review.rating == 1 %}
+			<p class="card-text">Оценка: Плохо</p>
+			{% endif %}
+			{% if review.rating == 2 %}
+			<p class="card-text">Оценка: Неудовлетворительно</p>
+			{% endif %}
+			{% if review.rating == 3 %}
+			<p class="card-text">Оценка: Удовлетворительно</p>
+			{% endif %}
+			{% if review.rating == 4 %}
+			<p class="card-text">Оценка: Хорошо</p>
+			{% endif %}
+			{% if review.rating == 5 %}
+			<p class="card-text">Оценка: Отлично</p>
+			{% endif %}
+
+			<p class="card-text">Дата: {{ review.date_created.strftime('%d.%m.%Y') }}</p>
+			<p class="card-text">{{ review.text | safe }}</p>
+		</div>
+	</div>
+	{% endif %}
+	{% endfor %}
+
+	{% if book.approved_reviews | length == 0 %}
+	<p class="text-center">Пока нет оставленных рецензий. Если вы уже оставляли рецензию, то она находится на модерации.
+	</p>
+	{% endif %}
+
+</section>
+{% if current_user.is_authenticated %}
+<div class="text-center mb-3">
+	<a href="{{ url_for('books.new_review', book_id=book.id) }}" class="btn btn-dark">Написать рецензию</a>
+</div>
+{% endif %}
+
+{% endblock %}

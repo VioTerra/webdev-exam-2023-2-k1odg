@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% from 'pagination.html' import render_pagination %}
+
+{% block content %}
+
+<div class="my-3">
+
+	<h2 class="mb-3 text-center text-uppercase font-weight-bold">Каталог книг</h2>
+
+	<form class="mb-3 mt-3 row align-items-center">
+		<div class="col-md-10 my-3">
+			<input autocomplete="off" type="text" class="form-control" id="book-name" name="name"
+				value="{{ request.args.get('name') or '' }}" placeholder="Название книги">
+		</div>
+
+		<div class="col-md-2 my-3 align-self-end">
+			<button type="submit" class="btn btn-dark w-100 mt-auto">Найти</button>
+		</div>
+	</form>
+</div>
+
+<div class="books-list container-fluid mt-3 mb-3">
+	{% for book in books %}
+	<div class="row p-3 border rounded mb-3">
+		<div>
+			<h6>{{ loop.index + ((page - 1) * per_page) }}</h6>
+		</div>
+		<div class="col-md-3 mb-3 mb-md-0 d-flex align-items-center justify-content-center">
+
+			{% for image in images %}
+			{% if image.id == book.cover_id %}
+			<img class="img-fluid" src="{{ image.url }}" />
+			{% endif %}
+			{% endfor %}
+
+			{% if not images %}
+			<img class="show-img" src="{{ url_for('static', filename='images/book_example.png') }}" />
+			{% endif %}
+		</div>
+		<div class="col-md-9 align-items-center">
+			<div class="d-flex">
+				<h4 class="text-uppercase">{{ book.name }}</h4>
+				<p class="ms-auto rating">
+					<span>({{ book.approved_reviews | length }})</span>
+					<span>★</span> <span>{{ "%.2f" | format(book.rating) }}</span>
+				</p>
+			</div>
+			<p class="text-muted my-3">Автор: {{ book.author }}</p>
+
+			<p class="card-text">Жанр(ы):
+				{% for genre in book.genres %}
+				{{ genre.name }}{% if loop.last %}{% else %}, {% endif %}
+				{% endfor %}
+			</p>
+			<p class="text-bold my-3">{{ book.year }} год</p>
+
+			<p>{# book.description | truncate(300) #}</p>
+		</div>
+		<div class="btn-group mt-3" role="group">
+			{# if current_user.is_authenticated and current_user.can('show_book', user) #}
+			<a class="btn btn-success" href="{{ url_for('books.show_book', book_id=book.id) }}">Просмотр</a>
+			{# endif #}
+			{%if current_user.is_authenticated and current_user.can('edit_book', user) %}
+			<a class="btn btn-primary" href="{{ url_for('books.edit_book', book_id=book.id) }}">Редактирование</a>
+			{% endif %}
+			{% if current_user.is_authenticated and current_user.can('delete_book', user) %}
+			<button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteBook{{ book.id }}">
+				Удалить</button>
+			<div class="modal fade" id="deleteBook{{ book.id }}" data-bs-backdrop="static" data-bs-keyboard="false"
+				tabindex="-1" aria-labelledby="staticBackdropLabel{{ book.id }}" aria-hidden="true">
+				<div class="modal-dialog modal-dialog-centered">
+					<div class="modal-content">
+						<div class="modal-header">
+							<h5 class="modal-title" id="staticBackdropLabel{{ book.id }}">Удаление книги</h5>
+							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+						</div>
+						<div class="modal-body">
+							<p>Вы уверены, что хотите удалить книгу <span id="bookName{{ book.id }}">"{{ book.name
+									}}"</span>?</p>
+							<form id="deleteBookForm{{ book.id }}" class="d-none"
+								action="{{ url_for('books.delete_book', book_id=book.id) }}" method="POST">
+								<input type="submit" id="deleteUserButton{{ book.id }}">
+							</form>
+						</div>
+						<div class="modal-footer">
+							<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+							<label for="deleteUserButton{{ book.id }}" class="btn btn-danger">Удалить</label>
+						</div>
+					</div>
+				</div>
+			</div>
+			{% endif %}
+		</div>
+	</div>
+	{% endfor %}
+</div>
+
+<div class="mb-4">
+	{{ render_pagination(pagination, request.endpoint, search_params) }}
+</div>
+
+{% if current_user.is_authenticated and current_user.can('create_book', user) %}
+<div class="text-center mb-3">
+	<a class="btn btn-lg btn-dark" href="{{ url_for('books.new_book') }}">Добавить книгу</a>
+</div>
+{% endif %}
+
+{% endblock %}

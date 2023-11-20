@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<section class="add-review mb-3">
+	<h2 class="mb-3 text-center text-uppercase font-weight-bold">Оставить рецензию</h2>
+	<form method="post" action="{{ url_for('books.add_review', book_id=book.id) }}">
+		<div class="mb-3">
+			<label for="rating" class="form-label">Оценка</label>
+			<select class="form-select" id="rating" name="rating" required>
+				<option value="" selected disabled hidden>Выберите оценку</option>
+				<option value="5">Отлично</option>
+				<option value="4">Хорошо</option>
+				<option value="3">Удовлетворительно</option>
+				<option value="2">Неудовлетворительно</option>
+				<option value="1">Плохо</option>
+				<option value="0">Ужасно</option>
+			</select>
+		</div>
+		<div class="mb-3">
+			<label for="text" class="form-label">Текст рецензии</label>
+			<textarea class="form-control" id="text" name="text" rows="5"></textarea>
+		</div>
+		<div class="text-center">
+			<button type="submit" class="btn btn-dark">Сохранить</button>
+		</div>
+	</form>
+</section>
+<a href="{{ url_for('books.show_book', book_id=book.id) }}" class="btn btn-dark">Вернуться к книге</a>
+
+{% endblock %}

@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2 class="mb-3 text-center text-uppercase font-weight-bold">Статус входа</h2>
+{% if current_user.is_authenticated %}
+<p class="text-center">Аутентификация пройдена. Здравствуй, {{ current_user.login }}!</p>
+{% else %}
+<p class="text-center">Аутентификация не пройдена!</p>
+{% endif %}
+
+{% endblock %}
