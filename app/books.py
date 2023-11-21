@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, flash, redirect, url_for
+from flask import Blueprint, render_template, request, flash, redirect, url_for, abort
 from app import db
 from models import *
 from tools import BooksFilter, ImageSaver
@@ -20,7 +20,7 @@ bp = Blueprint('books', __name__, url_prefix='/books')
 
 from auth import permission_check
 
-PER_PAGE = 3
+PER_PAGE = 5
 
 BOOK_PARAMS = [
     'name', 'description', 'year', 'publisher', 'author', 'volume'
@@ -100,31 +100,36 @@ def create_book():
 
 @bp.route('/book<int:book_id>')
 def show_book(book_id):
-    book = Book.query.get(book_id)
-    book.description = markdown.markdown(book.description)
+    try:
+        book = Book.query.get(book_id)
+        book.description = markdown.markdown(book.description)
 
-    reviews = Review.query.filter_by(book_id=book_id).order_by(Review.date_created.desc()).all()
-    for review in reviews:
-        review.text = markdown.markdown(review.text)
+        reviews = Review.query.filter_by(book_id=book_id).order_by(Review.date_created.desc()).all()
+        for review in reviews:
+            review.text = markdown.markdown(review.text)
 
-    users = User.query.all()
+        users = User.query.all()
 
-    image = Image.query.get(book.cover_id)
+        image = Image.query.get(book.cover_id)
 
-    return render_template('books/show_book.html',
-                           title=TITLE["show_book"],
-                           book=book,
-                           reviews=reviews,
-                           users=users,
-                           image=image
-                           )
-
+        return render_template('books/show_book.html',
+                            title=TITLE["show_book"],
+                            book=book,
+                            reviews=reviews,
+                            users=users,
+                            image=image
+                            )
+    except:
+        abort(404)
 
 @bp.route('/book<int:book_id>/new_review')
 @login_required
 def new_review(book_id):
-    book = Book.query.get(book_id)
-    return render_template('reviews/new_review.html',
+    if Book.query.get(book_id) is None:
+        abort(404)
+    else:
+        book = Book.query.get(book_id)
+        return render_template('reviews/new_review.html',
                            title=TITLE["new_review"],
                            book=book)
 
@@ -135,13 +140,11 @@ def add_review(book_id):
     rating = int(request.form['rating'])
     text = bleach.clean(request.form.get('text'))
     book = Book.query.get(book_id)
-    # Проверка, оставлял ли пользователь уже отзыв для данной книги
     existing_review = Review.query.filter_by(book_id=book_id, user_id=current_user.id).first()
     if existing_review:
         flash(f'Вы уже отправляли рецензию книги "{book.name}"!', 'danger')
         return redirect(url_for('books.show_book', book_id=book_id))
 
-    # Создание нового отзыва
     review = Review(rating=rating, text=text, date_created=func.now(), book_id=book_id, user_id=current_user.id)
     
     if not request.form.get('text'):
@@ -170,14 +173,17 @@ def add_review(book_id):
 @login_required
 @permission_check('edit_book')
 def edit_book(book_id):
-    book = Book.query.get(book_id)
-    genres = Genre.query.all()
-    images = Image.query.all()
-    return render_template('books/edit_book.html',
-                           title=TITLE["edit_book"],
-                           book=book,
-                           images=images,
-                           genres=genres)
+    if Book.query.get(book_id) is None:
+        abort(404)
+    else:
+        book = Book.query.get(book_id)
+        genres = Genre.query.all()
+        images = Image.query.all()
+        return render_template('books/edit_book.html',
+                            title=TITLE["edit_book"],
+                            book=book,
+                            images=images,
+                            genres=genres)
 
 
 @bp.route('/book<int:book_id>/update_book', methods=['POST'])
@@ -187,7 +193,6 @@ def update_book(book_id):
     book = Book.query.get(book_id)
     if request.method == 'POST':
         try:
-            # Обновляем поля книги на основе данных из формы
             book.name = request.form.get('name')
             description = bleach.clean(request.form.get('description'))
             book.description = description
@@ -196,21 +201,18 @@ def update_book(book_id):
             book.author = request.form.get('author')
             book.volume = request.form.get('volume')
 
-            # Обновляем жанры, которым принадлежит книга
             genre_ids = request.form.getlist('genre_id')
             book.genres = Genre.query.filter(Genre.id.in_(genre_ids)).all()
 
-            # Проверка заполнены ли все поля
             if not all(request.form.get(field) for field in ['name', 'description', 'year', 'publisher', 'author', 'volume', 'genre_id']):
                 flash('Заполните все обязательные поля!', 'danger')
                 return redirect(url_for('books.edit_book', book_id=book_id))
 
-            # Сохраняем изменения в базе данных
             db.session.commit()
             flash(f'Изменения книги "{book.name}" успешно сохранены.', 'success')
             return redirect(url_for('books.main_page', book_id=book_id))
         except:
-            db.session.rollback() # Откатываем изменения при возникновении ошибки
+            db.session.rollback() 
             flash('Ошибка при сохранении изменений. Проверьте корректность введенных данных!', 'danger')
             return redirect(url_for('books.edit_book', book_id=book_id))
 

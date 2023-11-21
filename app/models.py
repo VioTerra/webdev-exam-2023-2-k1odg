@@ -1,7 +1,6 @@
 import os
 
 import sqlalchemy as sa
-# импортируется библиотека SQLAlchemy под псевдонимом sa
 
 from users_policy import UsersPolicy
 
@@ -12,7 +11,6 @@ from flask_login import UserMixin
 from flask import url_for, current_app
 
 from app import db
-# импортируется объект db из модуля app
 
 
 class Book(db.Model):
@@ -38,15 +36,15 @@ class Book(db.Model):
     
     @property
     def rating(self):
-        approved_reviews = Review.query.filter_by(status_id=2, book_id=self.id).all()
-        if len(approved_reviews) > 0:
-            rating_sum = sum(review.rating for review in approved_reviews)
-            return rating_sum / len(approved_reviews)
+        reviews = Review.query.filter_by(book_id=self.id).all()
+        if len(reviews) > 0:
+            rating_sum = sum(review.rating for review in reviews)
+            return rating_sum / len(reviews)
         return 0
     
     @property
     def approved_reviews(self):
-        return [review for review in self.reviews if review.status_id == 2]
+        return [review for review in self.reviews]
 
 
 class Genre(db.Model):
@@ -59,7 +57,6 @@ class Genre(db.Model):
         return '<Genre %r>' % self.name
 
 
-# Связующая таблица
 class BookGenre(db.Model):
     __tablename__ = 'books_genres'
 
@@ -146,21 +143,12 @@ class User(db.Model, UserMixin):
         self.login = user_login
         self.role_id = role_id
         
-	# Возвращает тру, если пользователь админ, и фолс, если нет
     def is_admin(self):
-        # Сравнивается Id роли с админским
         return self.role_id == current_app.config['ADMINISTRATOR_ROLE_ID']
     
-    # Возвращает тру, если пользователь модер, и фолс, если нет
     def is_moderator(self):
-        # Сравнивается Id роли с модером
         return self.role_id == current_app.config['MODERATOR_ROLE_ID']
 
-	# Метод, отвечающий за проверку прав
-	# Метод `can` создает экземпляр класса `UsersPolicy` с переданной записью и подгружает
-	#  метод `action` этого класса, который отвечает за проверку полномочий пользователя на
-	#  выполнение данного действия. Если метод найден, то он вызывается и возвращается его
-	#  результат. Если метод не найден, то возвращается `False`.
     def can(self, action, record = None):
         users_policy = UsersPolicy(record)
         method = getattr(users_policy, action, None)
